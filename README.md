@@ -1,40 +1,38 @@
-# Weakly-Supervised-Semantic-Segmentation
-Weakly Supervised Semantic Segmentation implementations using tensorflow.
+# Domain Adaptation
+Domain Adaptation implementations using tensorflow.
 
 # Installation
 ```bash
-pip install git+https://github.com/kthfan/Weakly-Supervised-Semantic-Segmentation.git
+pip install git+https://github.com/kthfan/Domain-Adaptation.git
 ```
 
 # Usage
 
 ## import package
 ```python
-from wsss import SEAM, Pixel2Prototype
-from wsss.utils import Affine, nonlocal_neural_network
+from domainadaptation import VADA, DIRTT
 ```
 
-## SEAM
-The implementation of Self-supervised Equivariant Attention Mechanism for Weakly Supervised Semantic Segmentation.
+## A DIRT-t approach to unsupervised domain adaptation
+The implementation ofA DIRT-t approach to unsupervised domain adaptation.
 
-Define backbone of CNN:
+Train data using tf.data.Dataset:
 ```python
-img_input = tf.keras.layers.Input((28, 28, 1))
-x = tf.keras.layers.Conv2D(64, 3, padding="same")(img_input)
-x = tf.keras.layers.BatchNormalization()(x)
-x0 = tf.keras.layers.Activation("relu")(x)
-x = tf.keras.layers.Conv2D(128, 3, padding="same")(x0)
+train_ds = tf.data.Dataset.zip((x_source_ds, y_source_ds, x_target_ds))
 ```
+Note that `x_source_ds` is image dataset in source domain, `y_source_ds` is label dataset in source domain and `x_target_ds` is image dataset in target domain.
+All `x_source_ds`, `y_source_ds` and `x_target_ds` should be instance of `tf.data.Dataset`.
 
-Create SEAM model:
+Create Virtual Adversarial Domain Adaptation (VADA) model:
 ```python
-seam = SEAM(img_input, x, classes=10, classification_activation="softmax")
+image_input, feature_output, domain_output, classification_output = VADA.get_default_model()
+vada = VADA(image_input, feature_output, domain_output, classification_output)
 ```
 
 Train model:
 ```python
-seam.compile(tf.keras.optimizers.Adam(learning_rate=1e-4), loss=tf.keras.losses.categorical_crossentropy, metrics=['accuracy'])
-seam.fit(X_train, y_train)
+vada.compile(tf.keras.optimizers.Adam(learning_rate=1e-5), loss=tf.keras.losses.categorical_crossentropy, metrics=['accuracy'])
+vada.fit(train_ds)
 ```
 
 Prediction:
