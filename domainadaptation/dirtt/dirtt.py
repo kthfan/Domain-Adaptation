@@ -1,6 +1,7 @@
 import tensorflow as tf
 from ._vada_dirtt import _VADA_DIRTT
 
+
 class DIRTT(_VADA_DIRTT):
     def __init__(self, image_input, feature_output, domain_output, classification_output, name='dirt-t', **kwargs):
         super(DIRTT, self).__init__(image_input, feature_output, domain_output, classification_output, 
@@ -14,7 +15,7 @@ class DIRTT(_VADA_DIRTT):
     def _loss(self, x_target, pseudo_y_target, f_t, d_t, y_t):
            
         # ensure parameterization-invariant, in which KL(h(x; theta)||h(x; theta+d theta)) < epsilon
-        L_y = self.compiled_loss(y_t, pseudo_y_target, regularization_losses=None)
+        L_y = tf.reduce_mean(self.constraint_loss(pseudo_y_target, y_t))
         
         L_c = tf.reduce_mean(self.loss(y_t, y_t)) # conditional entropy 
         L_v_t = self._vat_loss(x_target, y_t) # locally-Lipschitz constraint

@@ -1,6 +1,7 @@
 import tensorflow as tf
 import tensorflow_addons as tfa
 
+
 class _VADA_DIRTT(tf.keras.models.Model):
     '''
     Implementation of A DIRT-t approach to unsupervised domain adaptation (https://arxiv.org/pdf/1802.08735.pdf) in tensorflow.
@@ -60,22 +61,22 @@ class _VADA_DIRTT(tf.keras.models.Model):
         self._build_models(image_input, feature_output, domain_output, classification_output)
         
     @staticmethod
-    def get_default_model(input_shape=(32, 32, 3), output_shape=10, sig=1, p=0.5, use_instance_norm=True):
+    def get_default_model(input_shape=(32, 32, 3), output_shape=10, sig=1, p=0.5, use_instance_norm=True, filters=[96, 192, 192]):
         x = image_input = tf.keras.layers.Input(input_shape)
         if use_instance_norm: 
             x = tfa.layers.InstanceNormalization()(x)
         
-        for i in range(3): x = tf.nn.leaky_relu(tf.keras.layers.Conv2D(64, 3, padding='same')(x), 0.1)
+        for i in range(3): x = tf.nn.leaky_relu(tf.keras.layers.Conv2D(filters[0], 3, padding='same')(x), 0.1)
         x = tf.keras.layers.MaxPool2D(2)(x)
         x = tf.keras.layers.Dropout(p)(x)
         x = tf.keras.layers.GaussianNoise(sig)(x)
         
-        for i in range(3): x = tf.nn.leaky_relu(tf.keras.layers.Conv2D(64, 3, padding='same')(x), 0.1)
+        for i in range(3): x = tf.nn.leaky_relu(tf.keras.layers.Conv2D(filters[1], 3, padding='same')(x), 0.1)
         x = tf.keras.layers.MaxPool2D(2)(x)
         x = tf.keras.layers.Dropout(p)(x)
         feature_output = x = tf.keras.layers.GaussianNoise(sig)(x)
     
-        for i in range(3): x = tf.nn.leaky_relu(tf.keras.layers.Conv2D(64, 3, padding='same')(x), 0.1)
+        for i in range(3): x = tf.nn.leaky_relu(tf.keras.layers.Conv2D(filters[2], 3, padding='same')(x), 0.1)
         x = tf.keras.layers.GlobalAveragePooling2D()(x)
         
         classification_output = tf.keras.layers.Dense(output_shape, 'softmax')(x)
@@ -163,9 +164,9 @@ class _VADA_DIRTT(tf.keras.models.Model):
         return L_v
     
     def switch_to_vada(self):
-        image_input = self.inputs[0]
-        feature_output, domain_output, classification_output = self.outputs
-        config = self.get_config(); config.pop('model')
+        image_input = self.model.inputs[0]
+        feature_output, domain_output, classification_output = self.model.outputs
+        config = self.get_config(); config.pop('model'); config.pop('name')
         vada = VADA(image_input, feature_output, domain_output, classification_output, **config)
         
         return vada
@@ -173,10 +174,10 @@ class _VADA_DIRTT(tf.keras.models.Model):
     def switch_to_dirtt(self, auto_compile=True):
         image_input = self.model.inputs[0]
         feature_output, domain_output, classification_output = self.model.outputs
-        config = self.get_config(); config.pop('model')
+        config = self.get_config(); config.pop('model'); config.pop('name')
         dirtt = DIRTT(image_input, feature_output, domain_output, classification_output, **config)
         if auto_compile:
-            dirtt.compile(self.optimizer, loss=self.constraint_loss)
+            dirtt.compile(self.optimizer, loss=self.loss)
         return dirtt
     
     def compile(self, optimizer, **kwargs):
@@ -187,9 +188,14 @@ class _VADA_DIRTT(tf.keras.models.Model):
         self.optimizers = {'h': self.optimizer, 
                            'd':type(self.optimizer)(**self.optimizer.get_config()),
                            't':type(self.optimizer)(**self.optimizer.get_config())}
-        
+       
+
+    
     def predict_step(self, data):
-        return self.model.predict_step(data)
+        if len(data)==3:
+            return self.model.predict_step(data)
+        else:
+            return self.classifier.predict_step(data)
 
     def get_config(self):
         

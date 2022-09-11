@@ -1,6 +1,7 @@
 import tensorflow as tf
 from ._vada_dirtt import _VADA_DIRTT
 
+
 class VADA(_VADA_DIRTT):
     def __init__(self, image_input, feature_output, domain_output, classification_output, name='vada', **kwargs):
         super(VADA, self).__init__(image_input, feature_output, domain_output, classification_output, 
@@ -60,6 +61,8 @@ class VADA(_VADA_DIRTT):
             
             return y_s
             
+        elif y_source is None:
+            return self.classifier(x_source)
         else:
             return self.model(x_source)
     
